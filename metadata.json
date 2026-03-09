@@ -1,0 +1,5 @@
+{
+  "name": "Simulador de Baldosas",
+  "description": "Visualiza cómo se verían diferentes baldosas en tu espacio usando IA.",
+  "requestFramePermissions": []
+}
