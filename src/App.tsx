@@ -9,87 +9,100 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Sparkles, CheckCircle2, ChevronRight, ChevronLeft, Trash2, Download, Loader2, Eraser, PenTool } from 'lucide-react';
-import { GoogleGenAI } from '@google/genai';
+import { Upload, Sparkles, CheckCircle2, ChevronRight, ChevronLeft, Trash2, Download, Loader2, Eraser, PenTool, Ruler } from 'lucide-react';
+import { GoogleGenAI, Type } from '@google/genai';
 
 const TILE_OPTIONS = [
   { 
     id: 'stone-gray', 
     name: 'Piedra Gris', 
     prompt: 'grey stone floor texture', 
-    image: 'https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1600607688969-a5bfcd646154?auto=format&fit=crop&w=400&q=80',
+    size: '60x60 cm'
   },
   { 
     id: 'marble-cream', 
     name: 'Mármol Crema', 
     prompt: 'cream beige marble floor tiles', 
-    image: 'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1596394516093-501ba68a0ba6?auto=format&fit=crop&w=400&q=80',
+    size: '60x60 cm'
   },
   { 
     id: 'plain-beige', 
     name: 'Liso Beige', 
     prompt: 'plain light beige floor texture', 
-    image: 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&w=400&q=80',
+    size: 'Continuo'
   },
   { 
     id: 'brick-red', 
     name: 'Ladrillo Rojo', 
     prompt: 'red brick floor pattern', 
-    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=400&q=80',
+    size: '10x20 cm'
   },
   { 
     id: 'brick-gray', 
     name: 'Ladrillo Gris', 
     prompt: 'grey brick floor pattern', 
-    image: 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1518640467707-6811f4a6ab73?auto=format&fit=crop&w=400&q=80',
+    size: '10x20 cm'
   },
   { 
     id: 'brick-beige', 
     name: 'Ladrillo Beige', 
     prompt: 'light beige brick floor pattern', 
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80',
+    size: '10x20 cm'
   },
   { 
     id: 'stone-irregular', 
     name: 'Piedra Irregular', 
     prompt: 'irregular beige stone floor paving', 
-    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80',
+    size: 'Irregular'
   },
   { 
     id: 'wood-beige', 
     name: 'Madera Beige', 
     prompt: 'light beige wood floor planks', 
-    image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?auto=format&fit=crop&w=400&q=80',
+    size: '20x120 cm'
   },
   { 
     id: 'wood-vertical', 
     name: 'Madera Vertical', 
     prompt: 'vertical light beige wood floor planks', 
-    image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?auto=format&fit=crop&w=400&q=80',
+    size: '20x120 cm'
   },
   { 
     id: 'stripes-vertical', 
     name: 'Listones Verticales', 
     prompt: 'vertical striped floor pattern', 
-    image: 'https://images.unsplash.com/photo-1615800098779-1be32e60cca3?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1615800098779-1be32e60cca3?auto=format&fit=crop&w=400&q=80',
+    size: '10x60 cm'
   },
   { 
     id: 'stripes-dark', 
     name: 'Listones Oscuros', 
     prompt: 'dark brown vertical striped floor pattern', 
-    image: 'https://images.unsplash.com/photo-1615800098779-1be32e60cca3?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1615800098779-1be32e60cca3?auto=format&fit=crop&w=400&q=80',
+    size: '10x60 cm'
   },
   { 
     id: 'tiles-red', 
     name: 'Baldosas Rojas', 
     prompt: 'red square floor tiles', 
-    image: 'https://images.unsplash.com/photo-1618220179428-22790b46a0eb?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1618220179428-22790b46a0eb?auto=format&fit=crop&w=400&q=80',
+    size: '30x30 cm'
   },
   { 
     id: 'tiles-beige', 
     name: 'Baldosas Beige', 
     prompt: 'light beige square floor tiles', 
-    image: 'https://images.unsplash.com/photo-1618220179428-22790b46a0eb?auto=format&fit=crop&w=400&q=80' 
+    image: 'https://images.unsplash.com/photo-1618220179428-22790b46a0eb?auto=format&fit=crop&w=400&q=80',
+    size: '45x45 cm'
   },
 ];
 
@@ -233,6 +246,12 @@ export default function App() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<{
+    roomSize: string;
+    currentTileSize: string;
+    recommendation: string;
+  } | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Drawing state
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -341,14 +360,61 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  const analyzeImage = async () => {
+    if (!originalImage || !mimeType) return;
+    setIsAnalyzing(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [
+          {
+            inlineData: {
+              data: originalImage.split(',')[1],
+              mimeType: mimeType,
+            }
+          },
+          {
+            text: "Analiza esta imagen de un espacio interior. Estima: 1. El área aproximada del espacio visible en metros cuadrados. 2. El tamaño aproximado de las baldosas actuales (si las hay, ej. 40x40cm, 60x60cm). 3. Una breve recomendación de diseño basada en la iluminación y amplitud del espacio. Devuelve la respuesta en formato JSON con las claves: 'roomSize', 'currentTileSize', 'recommendation'."
+          }
+        ],
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              roomSize: { type: Type.STRING, description: "Área estimada en m2" },
+              currentTileSize: { type: Type.STRING, description: "Tamaño estimado de baldosa actual" },
+              recommendation: { type: Type.STRING, description: "Recomendación de diseño" }
+            }
+          }
+        }
+      });
+      
+      const text = response.text;
+      if (text) {
+        setAnalysis(JSON.parse(text));
+      }
+    } catch (e) {
+      console.error("Error analyzing image:", e);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!originalImage || !selectedTile || !mimeType) return;
     
     setIsGenerating(true);
     setError(null);
     
+    // Run analysis in parallel
+    if (!analysis) {
+      analyzeImage();
+    }
+    
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       let parts: any[] = [
         {
@@ -495,6 +561,7 @@ export default function App() {
     setCustomTile(null);
     setError(null);
     setUserData({ name: '', email: '', phone: '' });
+    setAnalysis(null);
   };
 
   return (
@@ -845,6 +912,45 @@ export default function App() {
             <div className="flex-1 bg-white rounded-3xl shadow-sm border border-stone-200 p-4 mb-8">
               <ImageResult before={originalImage} after={generatedImage} />
             </div>
+
+            {(analysis || isAnalyzing) && (
+              <div className="bg-white rounded-3xl shadow-sm border border-stone-200 p-6 mb-8 max-w-3xl mx-auto w-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#E3000F]/10 rounded-xl flex items-center justify-center">
+                    <Ruler className="w-5 h-5 text-[#E3000F]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-stone-900">Análisis del Espacio</h3>
+                </div>
+                
+                {isAnalyzing ? (
+                  <div className="flex items-center justify-center py-8 text-stone-500 gap-3">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Analizando dimensiones de la imagen...</span>
+                  </div>
+                ) : analysis ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-stone-50 rounded-2xl p-4 border border-stone-100">
+                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Área Estimada</p>
+                      <p className="text-lg font-semibold text-stone-900">{analysis.roomSize}</p>
+                    </div>
+                    <div className="bg-stone-50 rounded-2xl p-4 border border-stone-100">
+                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Baldosa Actual</p>
+                      <p className="text-lg font-semibold text-stone-900">{analysis.currentTileSize}</p>
+                    </div>
+                    <div className="bg-stone-50 rounded-2xl p-4 border border-stone-100">
+                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Baldosa Nueva</p>
+                      <p className="text-lg font-semibold text-stone-900">
+                        {selectedTile === 'custom' ? 'Personalizado' : TILE_OPTIONS.find(t => t.id === selectedTile)?.size || 'N/A'}
+                      </p>
+                    </div>
+                    <div className="md:col-span-3 bg-stone-50 rounded-2xl p-4 border border-stone-100">
+                      <p className="text-xs text-stone-500 font-bold uppercase tracking-wider mb-1">Recomendación de Diseño</p>
+                      <p className="text-stone-700">{analysis.recommendation}</p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             <div className="flex justify-center mt-auto">
               <button
