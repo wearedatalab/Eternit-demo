@@ -909,8 +909,10 @@ export default function App() {
               <p className="text-stone-500">Desliza la barra central para comparar con el original.</p>
             </div>
 
-            <div className="flex-1 bg-white rounded-3xl shadow-sm border border-stone-200 p-4 mb-8">
-              <ImageResult before={originalImage} after={generatedImage} />
+            <div className="flex-1 bg-white rounded-3xl shadow-sm border border-stone-200 p-4 mb-8 max-h-[50vh] flex flex-col">
+              <div className="flex-1 relative min-h-0">
+                <ImageResult before={originalImage} after={generatedImage} />
+              </div>
             </div>
 
             {(analysis || isAnalyzing) && (
