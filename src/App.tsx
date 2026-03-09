@@ -164,6 +164,65 @@ const ImageResult = ({ before, after }: { before: string, after: string }) => {
   );
 };
 
+const compositeImages = (originalSrc: string, generatedSrc: string, maskCanvas: HTMLCanvasElement): Promise<string> => {
+  return new Promise((resolve) => {
+    const imgOriginal = new Image();
+    imgOriginal.crossOrigin = "anonymous";
+    imgOriginal.onload = () => {
+      const imgGenerated = new Image();
+      imgGenerated.crossOrigin = "anonymous";
+      imgGenerated.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = imgOriginal.width;
+          canvas.height = imgOriginal.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(generatedSrc);
+          
+          // Draw original image
+          ctx.drawImage(imgOriginal, 0, 0);
+          
+          // Create temp canvas for mask
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = imgOriginal.width;
+          tempCanvas.height = imgOriginal.height;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (!tempCtx) return resolve(generatedSrc);
+          
+          // Draw mask scaled to original image dimensions
+          tempCtx.drawImage(maskCanvas, 0, 0, imgOriginal.width, imgOriginal.height);
+          
+          // Make mask fully opaque
+          const maskData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+          const data = maskData.data;
+          for (let i = 0; i < data.length; i += 4) {
+            if (data[i+3] > 0) {
+              data[i+3] = 255; // alpha
+            }
+          }
+          tempCtx.putImageData(maskData, 0, 0);
+          
+          // Source-in: keep generated image only where mask is opaque
+          tempCtx.globalCompositeOperation = 'source-in';
+          tempCtx.drawImage(imgGenerated, 0, 0, imgOriginal.width, imgOriginal.height);
+          
+          // Draw the masked generated image over the original
+          ctx.drawImage(tempCanvas, 0, 0);
+          
+          resolve(canvas.toDataURL('image/png'));
+        } catch (e) {
+          console.error("Error compositing images:", e);
+          resolve(generatedSrc); // Fallback
+        }
+      };
+      imgGenerated.onerror = () => resolve(generatedSrc);
+      imgGenerated.src = generatedSrc;
+    };
+    imgOriginal.onerror = () => resolve(generatedSrc);
+    imgOriginal.src = originalSrc;
+  });
+};
+
 export default function App() {
   const [step, setStep] = useState(0);
   const [userData, setUserData] = useState({ name: '', email: '', phone: '' });
@@ -289,7 +348,7 @@ export default function App() {
     setError(null);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       
       let parts: any[] = [
         {
@@ -342,11 +401,44 @@ export default function App() {
         parts.push({ text: prompt });
       }
 
+      let aspectRatio = "1:1";
+      if (imageRef.current) {
+        const width = imageRef.current.naturalWidth;
+        const height = imageRef.current.naturalHeight;
+        const ratio = width / height;
+        
+        // Find closest supported aspect ratio
+        const supportedRatios = [
+          { value: "1:1", ratio: 1 },
+          { value: "4:3", ratio: 4/3 },
+          { value: "3:4", ratio: 3/4 },
+          { value: "16:9", ratio: 16/9 },
+          { value: "9:16", ratio: 9/16 }
+        ];
+        
+        let closest = supportedRatios[0];
+        let minDiff = Math.abs(ratio - closest.ratio);
+        
+        for (let i = 1; i < supportedRatios.length; i++) {
+          const diff = Math.abs(ratio - supportedRatios[i].ratio);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = supportedRatios[i];
+          }
+        }
+        aspectRatio = closest.value;
+      }
+
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash-image',
         contents: {
           parts: parts,
         },
+        config: {
+          imageConfig: {
+            aspectRatio: aspectRatio
+          }
+        }
       });
 
       let foundImage = false;
@@ -355,7 +447,15 @@ export default function App() {
       if (response.candidates && response.candidates.length > 0) {
         for (const part of response.candidates[0].content.parts || []) {
           if (part.inlineData) {
-            setGeneratedImage(`data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`);
+            const genImgSrc = `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+            
+            if (hasMask && canvasRef.current) {
+              const finalImage = await compositeImages(originalImage, genImgSrc, canvasRef.current);
+              setGeneratedImage(finalImage);
+            } else {
+              setGeneratedImage(genImgSrc);
+            }
+            
             foundImage = true;
             break;
           } else if (part.text) {
